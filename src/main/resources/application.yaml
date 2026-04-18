@@ -1,6 +1,21 @@
 ktor:
     application:
         modules:
-            - ktor-simulation-server.com.ApplicationKt.module
+            - ApplicationKt.module
     deployment:
-        port: 8080
+        port: 8081
+        host: 0.0.0.0
+
+database:
+    url: "jdbc:postgresql://localhost:5432/microgrid_db"
+    user: "postgres"
+    password: "postgres"
+    driver: "org.postgresql.Driver"
+    maxPoolSize: 10
+
+jwt:
+    secret: "your-secret-key-minimum-32-chars"
+    issuer: "microgrid-backend"
+    audience: "microgrid-mobile"
+    realm: "microgrid"
+    expiresInMs: 86400000  # 24 ore
