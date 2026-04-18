@@ -1,0 +1,6 @@
+package com.microgrid.model.dto.generic
+
+import kotlinx.serialization.Serializable
+
+@Serializable
+data class MessageResponse(val message: String)

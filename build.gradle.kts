@@ -16,16 +16,22 @@ kotlin {
 }
 
 dependencies {
-    implementation(libs.ktor.server.compression)
-    implementation(libs.ktor.server.default.headers)
-    implementation(libs.ktor.server.cors)
-    implementation(libs.ktor.server.call.logging)
-    implementation(libs.ktor.server.content.negotiation)
-    implementation(libs.ktor.server.core)
-    implementation(libs.ktor.serialization.kotlinx.json)
-    implementation(libs.ktor.server.netty)
+    // ── Ktor (toate pluginurile printr-un singur bundle) ───
+    implementation(libs.bundles.ktor.server)
+
+    // ── Bază de date (Exposed + PostgreSQL + HikariCP) ────
+    implementation(libs.bundles.exposed)
+    implementation(libs.postgresql)
+    implementation(libs.hikari)
+
+    // ── Auth ──────────────────────────────────────────────
+    implementation(libs.java.jwt)
+    implementation(libs.jbcrypt)
+
+    // ── Logging ───────────────────────────────────────────
     implementation(libs.logback.classic)
-    implementation(libs.ktor.server.config.yaml)
+
+    // ── Test ──────────────────────────────────────────────
     testImplementation(libs.ktor.server.test.host)
     testImplementation(libs.kotlin.test.junit)
 }
