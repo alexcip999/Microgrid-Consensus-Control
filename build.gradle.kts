@@ -29,9 +29,16 @@ dependencies {
     implementation(libs.jbcrypt)
 
     // ── Logging ───────────────────────────────────────────
+    implementation(libs.koin.logger.slf4j)
     implementation(libs.logback.classic)
 
-    // ── Test ──────────────────────────────────────────────
+    //── DI ───────────────────────────────────────────
+    implementation(libs.koin.ktor)
+
+
+    // ── Test ──────────────────────────────────────────────────────────────
     testImplementation(libs.ktor.server.test.host)
     testImplementation(libs.kotlin.test.junit)
+    testImplementation(libs.ktor.client.content.negotiation)
+    testImplementation(libs.ktor.client.core)
 }
