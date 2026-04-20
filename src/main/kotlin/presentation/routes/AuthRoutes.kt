@@ -1,8 +1,8 @@
 package presentation.routes
 
-import application.usecase.GetCurrentUserUseCase
-import application.usecase.LoginUseCase
-import application.usecase.RegisterUseCase
+import domain.usecase.auth.GetCurrentUserUseCase
+import domain.usecase.auth.LoginUseCase
+import domain.usecase.auth.RegisterUseCase
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.auth.authenticate
 import io.ktor.server.auth.jwt.JWTPrincipal
