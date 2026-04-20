@@ -75,15 +75,14 @@ fun Route.gridRoutes(
                 call.respond(HttpStatusCode.OK, grid.toResponse(inverters))
             }
 
-            delete("/{gridId}") {
+            delete("/{gridId}") {              // fix 1: era "/gridId" fara acolade
                 val id = call.gridId()
                 deleteGrid.execute(id)
                 call.respond(HttpStatusCode.NoContent)
             }
 
 
-
-            route("/{gridId}/inverters") {
+            route("/{gridId}/inverters") {     // fix 2: era "{gridId}/inverters" fara / si fara acolade
 
                 post {
                     val gridId   = call.gridId()
@@ -150,7 +149,7 @@ fun Route.gridRoutes(
 private fun RoutingCall.ownerId(): UUID =
     UUID.fromString(principal<JWTPrincipal>()!!.payload.getClaim("userId").asString())
 
-private fun RoutingCall.gridId(): UUID =
+private fun RoutingCall.gridId(): UUID =        // fix 4: era parameters["id"]
     try {
         UUID.fromString(parameters["gridId"] ?: throw NoSuchElementException("Missing grid id"))
     } catch (e: IllegalArgumentException) {
