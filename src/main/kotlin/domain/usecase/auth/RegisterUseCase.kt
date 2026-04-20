@@ -1,6 +1,5 @@
-package application.usecase
+package domain.usecase.auth
 
-import application.service.PasswordServiceImpl
 import domain.model.token.TokenClaims
 import domain.model.user.User
 import domain.model.user.UserRole
