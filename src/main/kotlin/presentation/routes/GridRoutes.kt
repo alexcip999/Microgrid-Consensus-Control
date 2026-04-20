@@ -75,14 +75,14 @@ fun Route.gridRoutes(
                 call.respond(HttpStatusCode.OK, grid.toResponse(inverters))
             }
 
-            delete("/{gridId}") {              // fix 1: era "/gridId" fara acolade
+            delete("/{gridId}") {
                 val id = call.gridId()
                 deleteGrid.execute(id)
                 call.respond(HttpStatusCode.NoContent)
             }
 
 
-            route("/{gridId}/inverters") {     // fix 2: era "{gridId}/inverters" fara / si fara acolade
+            route("/{gridId}/inverters") {
 
                 post {
                     val gridId   = call.gridId()
