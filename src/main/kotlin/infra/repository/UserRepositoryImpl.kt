@@ -1,4 +1,4 @@
-package infra.db
+package infra.repository
 
 import domain.model.user.User
 import domain.repository.UserRepository
@@ -9,18 +9,18 @@ import java.util.UUID
 
 class UserRepositoryImpl : UserRepository {
     override fun findById(id: UUID): User? = transaction {
-        UserEntity.findById(id)?.toDomain()
+        UserEntity.Companion.findById(id)?.toDomain()
     }
 
     override fun findByEmail(email: String): User? = transaction {
-        UserEntity
+        UserEntity.Companion
             .find { UsersTable.email eq email }
             .firstOrNull()
             ?.toDomain()
     }
 
     override fun save(user: User): User = transaction {
-        UserEntity.new(user.id) {
+        UserEntity.Companion.new(user.id) {
             email = user.email
             passwordHash = user.passwordHash
             role = user.role
