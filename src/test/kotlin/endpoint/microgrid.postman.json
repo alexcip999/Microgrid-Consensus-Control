@@ -1,0 +1,923 @@
+{
+  "info": {
+    "name": "Microgrid Backend - Complete",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "base_url", "value": "http://localhost:8081" },
+    { "key": "token", "value": "" },
+    { "key": "userId", "value": "" },
+    { "key": "gridId", "value": "" },
+    { "key": "inverterId1", "value": "" },
+    { "key": "inverterId2", "value": "" },
+    { "key": "simulationId", "value": "" }
+  ],
+  "item": [
+
+    {
+      "name": "── 01  HEALTH ──────────────────────────────────────",
+      "item": [
+        {
+          "name": "Health check",
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 200', () => pm.response.to.have.status(200));",
+              "pm.test('Status ok', () => pm.expect(pm.response.json().status).to.eql('ok'));"
+            ]}
+          }],
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/health"
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "── 02  AUTH ────────────────────────────────────────",
+      "item": [
+        {
+          "name": "Register - ADMIN",
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 201', () => pm.response.to.have.status(201));",
+              "pm.test('Has token', () => pm.expect(pm.response.json().token).to.be.a('string'));",
+              "pm.test('Role ADMIN', () => pm.expect(pm.response.json().role).to.eql('ADMIN'));",
+              "const r = pm.response.json();",
+              "pm.collectionVariables.set('token', r.token);",
+              "pm.collectionVariables.set('userId', r.userId);"
+            ]}
+          }],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{base_url}}/auth/register",
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"admin@microgrid.com\",\n  \"password\": \"password123\",\n  \"role\": \"ADMIN\"\n}" }
+          }
+        },
+        {
+          "name": "Register - duplicate email (400)",
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 400', () => pm.response.to.have.status(400));",
+              "pm.test('Error BAD_REQUEST', () => pm.expect(pm.response.json().error).to.eql('BAD_REQUEST'));"
+            ]}
+          }],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{base_url}}/auth/register",
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"admin@microgrid.com\",\n  \"password\": \"password123\",\n  \"role\": \"ADMIN\"\n}" }
+          }
+        },
+        {
+          "name": "Register - invalid email (400)",
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 400', () => pm.response.to.have.status(400));"
+            ]}
+          }],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{base_url}}/auth/register",
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"not-an-email\",\n  \"password\": \"password123\"\n}" }
+          }
+        },
+        {
+          "name": "Register - short password (400)",
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 400', () => pm.response.to.have.status(400));"
+            ]}
+          }],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{base_url}}/auth/register",
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"other@microgrid.com\",\n  \"password\": \"short\"\n}" }
+          }
+        },
+        {
+          "name": "Login - success",
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 200', () => pm.response.to.have.status(200));",
+              "pm.test('Has token', () => pm.expect(pm.response.json().token).to.be.a('string'));",
+              "const r = pm.response.json();",
+              "pm.collectionVariables.set('token', r.token);",
+              "pm.collectionVariables.set('userId', r.userId);"
+            ]}
+          }],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{base_url}}/auth/login",
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"admin@microgrid.com\",\n  \"password\": \"password123\"\n}" }
+          }
+        },
+        {
+          "name": "Login - wrong password (400)",
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 400', () => pm.response.to.have.status(400));"
+            ]}
+          }],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{base_url}}/auth/login",
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"admin@microgrid.com\",\n  \"password\": \"wrongpassword\"\n}" }
+          }
+        },
+        {
+          "name": "Login - unknown email (400)",
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 400', () => pm.response.to.have.status(400));"
+            ]}
+          }],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{base_url}}/auth/login",
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"unknown@microgrid.com\",\n  \"password\": \"password123\"\n}" }
+          }
+        },
+        {
+          "name": "Me - success",
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 200', () => pm.response.to.have.status(200));",
+              "pm.test('Email correct', () => pm.expect(pm.response.json().email).to.eql('admin@microgrid.com'));",
+              "pm.test('Has id', () => pm.expect(pm.response.json().id).to.be.a('string'));"
+            ]}
+          }],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": "{{base_url}}/auth/me"
+          }
+        },
+        {
+          "name": "Me - no token (401)",
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 401', () => pm.response.to.have.status(401));"
+            ]}
+          }],
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/auth/me"
+          }
+        },
+        {
+          "name": "Me - invalid token (401)",
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 401', () => pm.response.to.have.status(401));"
+            ]}
+          }],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer invalid.token.here" }],
+            "url": "{{base_url}}/auth/me"
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "── 03  GRID ────────────────────────────────────────",
+      "item": [
+        {
+          "name": "Create grid - PHASE_1 RING",
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 201', () => pm.response.to.have.status(201));",
+              "pm.test('Name correct', () => pm.expect(pm.response.json().name).to.eql('Microgrid Alpha'));",
+              "pm.test('Phase PHASE_1', () => pm.expect(pm.response.json().phase).to.eql('PHASE_1'));",
+              "pm.test('Topology RING', () => pm.expect(pm.response.json().topology).to.eql('RING'));",
+              "pm.test('fNom 60', () => pm.expect(pm.response.json().fNom).to.eql(60.0));",
+              "pm.collectionVariables.set('gridId', pm.response.json().id);"
+            ]}
+          }],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": "{{base_url}}/grids",
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Microgrid Alpha\",\n  \"phase\": \"PHASE_1\",\n  \"topology\": \"RING\",\n  \"fNom\": 60.0,\n  \"vNom\": 1.0\n}" }
+          }
+        },
+        {
+          "name": "Create grid - blank name (400)",
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 400', () => pm.response.to.have.status(400));"
+            ]}
+          }],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": "{{base_url}}/grids",
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"\",\n  \"phase\": \"PHASE_1\",\n  \"topology\": \"RING\",\n  \"fNom\": 60.0,\n  \"vNom\": 1.0\n}" }
+          }
+        },
+        {
+          "name": "Create grid - invalid fNom (400)",
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 400', () => pm.response.to.have.status(400));"
+            ]}
+          }],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": "{{base_url}}/grids",
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Bad Grid\",\n  \"phase\": \"PHASE_1\",\n  \"topology\": \"RING\",\n  \"fNom\": 100.0,\n  \"vNom\": 1.0\n}" }
+          }
+        },
+        {
+          "name": "Create grid - no token (401)",
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 401', () => pm.response.to.have.status(401));"
+            ]}
+          }],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{base_url}}/grids",
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Test\",\n  \"phase\": \"PHASE_1\",\n  \"topology\": \"RING\",\n  \"fNom\": 60.0,\n  \"vNom\": 1.0\n}" }
+          }
+        },
+        {
+          "name": "List grids",
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 200', () => pm.response.to.have.status(200));",
+              "pm.test('Is array', () => pm.expect(pm.response.json()).to.be.an('array'));",
+              "pm.test('Has 1 grid', () => pm.expect(pm.response.json().length).to.eql(1));"
+            ]}
+          }],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": "{{base_url}}/grids"
+          }
+        },
+        {
+          "name": "Get grid by id",
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 200', () => pm.response.to.have.status(200));",
+              "pm.test('Id matches', () => pm.expect(pm.response.json().id).to.eql(pm.collectionVariables.get('gridId')));",
+              "pm.test('Has inverters array', () => pm.expect(pm.response.json().inverters).to.be.an('array'));"
+            ]}
+          }],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": "{{base_url}}/grids/{{gridId}}"
+          }
+        },
+        {
+          "name": "Get grid - unknown id (404)",
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 404', () => pm.response.to.have.status(404));"
+            ]}
+          }],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": "{{base_url}}/grids/00000000-0000-0000-0000-000000000000"
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "── 04  INVERTER ────────────────────────────────────",
+      "item": [
+        {
+          "name": "Create Inv1",
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 201', () => pm.response.to.have.status(201));",
+              "pm.test('Label Inv1', () => pm.expect(pm.response.json().label).to.eql('Inv1'));",
+              "pm.test('Index 0', () => pm.expect(pm.response.json().index).to.eql(0));",
+              "pm.test('kdroopP 0.02', () => pm.expect(pm.response.json().kdroopP).to.eql(0.02));",
+              "pm.collectionVariables.set('inverterId1', pm.response.json().id);"
+            ]}
+          }],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": "{{base_url}}/grids/{{gridId}}/inverters",
+            "body": { "mode": "raw", "raw": "{\n  \"label\": \"Inv1\",\n  \"index\": 0,\n  \"pMax\": 1.0,\n  \"p0Ref\": 0.5,\n  \"q0Ref\": 0.0,\n  \"kdroopP\": 0.02,\n  \"kdroopQ\": 0.05,\n  \"rLine\": 0.05,\n  \"lLine\": 0.0005,\n  \"epsilonP\": 0.20,\n  \"epsilonQ\": 0.05\n}" }
+          }
+        },
+        {
+          "name": "Create Inv2",
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 201', () => pm.response.to.have.status(201));",
+              "pm.test('Label Inv2', () => pm.expect(pm.response.json().label).to.eql('Inv2'));",
+              "pm.test('Index 1', () => pm.expect(pm.response.json().index).to.eql(1));",
+              "pm.collectionVariables.set('inverterId2', pm.response.json().id);"
+            ]}
+          }],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": "{{base_url}}/grids/{{gridId}}/inverters",
+            "body": { "mode": "raw", "raw": "{\n  \"label\": \"Inv2\",\n  \"index\": 1,\n  \"pMax\": 1.0,\n  \"p0Ref\": 0.5,\n  \"q0Ref\": 0.0,\n  \"kdroopP\": 0.04,\n  \"kdroopQ\": 0.05,\n  \"rLine\": 0.30,\n  \"lLine\": 0.002,\n  \"epsilonP\": 0.20,\n  \"epsilonQ\": 0.05\n}" }
+          }
+        },
+        {
+          "name": "Create inverter - invalid epsilon (400)",
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 400', () => pm.response.to.have.status(400));"
+            ]}
+          }],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": "{{base_url}}/grids/{{gridId}}/inverters",
+            "body": { "mode": "raw", "raw": "{\n  \"label\": \"BadInv\",\n  \"index\": 2,\n  \"pMax\": 1.0,\n  \"p0Ref\": 0.5,\n  \"q0Ref\": 0.0,\n  \"kdroopP\": 0.02,\n  \"kdroopQ\": 0.05,\n  \"rLine\": 0.05,\n  \"lLine\": 0.0005,\n  \"epsilonP\": 0.9,\n  \"epsilonQ\": 0.05\n}" }
+          }
+        },
+        {
+          "name": "Create inverter - unknown grid (404)",
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 404', () => pm.response.to.have.status(404));"
+            ]}
+          }],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": "{{base_url}}/grids/00000000-0000-0000-0000-000000000000/inverters",
+            "body": { "mode": "raw", "raw": "{\n  \"label\": \"Inv1\",\n  \"index\": 0,\n  \"pMax\": 1.0,\n  \"p0Ref\": 0.5,\n  \"q0Ref\": 0.0,\n  \"kdroopP\": 0.02,\n  \"kdroopQ\": 0.05,\n  \"rLine\": 0.05,\n  \"lLine\": 0.0005,\n  \"epsilonP\": 0.20,\n  \"epsilonQ\": 0.05\n}" }
+          }
+        },
+        {
+          "name": "List inverters",
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 200', () => pm.response.to.have.status(200));",
+              "pm.test('Has 2 inverters', () => pm.expect(pm.response.json().length).to.eql(2));"
+            ]}
+          }],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": "{{base_url}}/grids/{{gridId}}/inverters"
+          }
+        },
+        {
+          "name": "Get inverter by id",
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 200', () => pm.response.to.have.status(200));",
+              "pm.test('Id matches', () => pm.expect(pm.response.json().id).to.eql(pm.collectionVariables.get('inverterId1')));"
+            ]}
+          }],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": "{{base_url}}/grids/{{gridId}}/inverters/{{inverterId1}}"
+          }
+        },
+        {
+          "name": "Update inverter - droop params",
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 200', () => pm.response.to.have.status(200));",
+              "pm.test('kdroopP updated', () => pm.expect(pm.response.json().kdroopP).to.eql(0.05));",
+              "pm.test('epsilonP updated', () => pm.expect(pm.response.json().epsilonP).to.eql(0.15));"
+            ]}
+          }],
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": "{{base_url}}/grids/{{gridId}}/inverters/{{inverterId1}}",
+            "body": { "mode": "raw", "raw": "{\n  \"kdroopP\": 0.05,\n  \"epsilonP\": 0.15\n}" }
+          }
+        },
+        {
+          "name": "Get grid with inverters included",
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 200', () => pm.response.to.have.status(200));",
+              "pm.test('Has 2 inverters', () => pm.expect(pm.response.json().inverters.length).to.eql(2));"
+            ]}
+          }],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": "{{base_url}}/grids/{{gridId}}"
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "── 05  SIMULATION ──────────────────────────────────",
+      "item": [
+        {
+          "name": "Create simulation - LOW fidelity",
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 201', () => pm.response.to.have.status(201));",
+              "pm.test('Status PENDING', () => pm.expect(pm.response.json().status).to.eql('PENDING'));",
+              "pm.test('Fidelity LOW', () => pm.expect(pm.response.json().fidelity).to.eql('LOW'));",
+              "pm.test('endedAt null', () => pm.expect(pm.response.json().endedAt).to.be.null);",
+              "pm.collectionVariables.set('simulationId', pm.response.json().id);"
+            ]}
+          }],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": "{{base_url}}/grids/{{gridId}}/simulations",
+            "body": { "mode": "raw", "raw": "{\n  \"gridId\": \"{{gridId}}\",\n  \"fidelity\": \"LOW\",\n  \"description\": \"Faza 1 - validare consens 2 invertoare\"\n}" }
+          }
+        },
+        {
+          "name": "Create simulation - duplicate active (400)",
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 400', () => pm.response.to.have.status(400));",
+              "pm.test('Error BAD_REQUEST', () => pm.expect(pm.response.json().error).to.eql('BAD_REQUEST'));"
+            ]}
+          }],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": "{{base_url}}/grids/{{gridId}}/simulations",
+            "body": { "mode": "raw", "raw": "{\n  \"gridId\": \"{{gridId}}\",\n  \"fidelity\": \"LOW\"\n}" }
+          }
+        },
+        {
+          "name": "Create simulation - unknown grid (404)",
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 404', () => pm.response.to.have.status(404));"
+            ]}
+          }],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": "{{base_url}}/grids/00000000-0000-0000-0000-000000000000/simulations",
+            "body": { "mode": "raw", "raw": "{\n  \"gridId\": \"00000000-0000-0000-0000-000000000000\",\n  \"fidelity\": \"LOW\"\n}" }
+          }
+        },
+        {
+          "name": "List simulations for grid",
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 200', () => pm.response.to.have.status(200));",
+              "pm.test('Has 1 simulation', () => pm.expect(pm.response.json().length).to.eql(1));"
+            ]}
+          }],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": "{{base_url}}/grids/{{gridId}}/simulations"
+          }
+        },
+        {
+          "name": "Get simulation by id",
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 200', () => pm.response.to.have.status(200));",
+              "pm.test('Id matches', () => pm.expect(pm.response.json().id).to.eql(pm.collectionVariables.get('simulationId')));"
+            ]}
+          }],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": "{{base_url}}/simulations/{{simulationId}}"
+          }
+        },
+        {
+          "name": "Get simulation - unknown id (404)",
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 404', () => pm.response.to.have.status(404));"
+            ]}
+          }],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": "{{base_url}}/simulations/00000000-0000-0000-0000-000000000000"
+          }
+        },
+        {
+          "name": "Get status - PENDING",
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 200', () => pm.response.to.have.status(200));",
+              "pm.test('Status PENDING', () => pm.expect(pm.response.json().status).to.eql('PENDING'));"
+            ]}
+          }],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": "{{base_url}}/simulations/{{simulationId}}/status"
+          }
+        },
+        {
+          "name": "Start simulation → RUNNING",
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 200', () => pm.response.to.have.status(200));",
+              "pm.test('Status RUNNING', () => pm.expect(pm.response.json().status).to.eql('RUNNING'));"
+            ]}
+          }],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": "{{base_url}}/simulations/{{simulationId}}/start"
+          }
+        },
+        {
+          "name": "Start simulation - already running (400)",
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 400', () => pm.response.to.have.status(400));"
+            ]}
+          }],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": "{{base_url}}/simulations/{{simulationId}}/start"
+          }
+        },
+        {
+          "name": "Get status - RUNNING",
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 200', () => pm.response.to.have.status(200));",
+              "pm.test('Status RUNNING', () => pm.expect(pm.response.json().status).to.eql('RUNNING'));"
+            ]}
+          }],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": "{{base_url}}/simulations/{{simulationId}}/status"
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "── 06  TELEMETRY ───────────────────────────────────",
+      "item": [
+        {
+          "name": "Ingest batch - 3 points Inv1",
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 201', () => pm.response.to.have.status(201));",
+              "pm.test('Count 3', () => pm.expect(pm.response.json().count).to.eql(3));",
+              "pm.test('Has entries', () => pm.expect(pm.response.json().entries.length).to.eql(3));",
+              "pm.test('Has p field', () => pm.expect(pm.response.json().entries[0].p).to.be.a('number'));",
+              "pm.test('Has consensusError', () => pm.expect(pm.response.json().entries[0].consensusError).to.be.a('number'));",
+              "pm.test('Has pProduction', () => pm.expect(pm.response.json().entries[0].pProduction).to.be.a('number'));"
+            ]}
+          }],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": "{{base_url}}/telemetry/batch",
+            "body": { "mode": "raw", "raw": "{\n  \"simulationId\": \"{{simulationId}}\",\n  \"points\": [\n    {\n      \"inverterId\": \"{{inverterId1}}\",\n      \"timestamp\": \"2026-04-20T10:00:00\",\n      \"p\": 0.50, \"q\": 0.10, \"vMag\": 1.00, \"freq\": 60.00,\n      \"deltaOmega\": 0.010, \"consensusError\": 0.050, \"pNorm\": 0.50,\n      \"pProduction\": 0.60, \"pLoad\": 0.10, \"pNet\": 0.50\n    },\n    {\n      \"inverterId\": \"{{inverterId1}}\",\n      \"timestamp\": \"2026-04-20T10:00:01\",\n      \"p\": 0.55, \"q\": 0.09, \"vMag\": 1.01, \"freq\": 59.98,\n      \"deltaOmega\": 0.008, \"consensusError\": 0.030, \"pNorm\": 0.55,\n      \"pProduction\": 0.62, \"pLoad\": 0.07, \"pNet\": 0.55\n    },\n    {\n      \"inverterId\": \"{{inverterId1}}\",\n      \"timestamp\": \"2026-04-20T10:00:02\",\n      \"p\": 0.60, \"q\": 0.08, \"vMag\": 1.02, \"freq\": 60.01,\n      \"deltaOmega\": 0.003, \"consensusError\": 0.010, \"pNorm\": 0.60,\n      \"pProduction\": 0.65, \"pLoad\": 0.05, \"pNet\": 0.60\n    }\n  ]\n}" }
+          }
+        },
+        {
+          "name": "Ingest batch - 3 points Inv2",
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 201', () => pm.response.to.have.status(201));",
+              "pm.test('Count 3', () => pm.expect(pm.response.json().count).to.eql(3));"
+            ]}
+          }],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": "{{base_url}}/telemetry/batch",
+            "body": { "mode": "raw", "raw": "{\n  \"simulationId\": \"{{simulationId}}\",\n  \"points\": [\n    {\n      \"inverterId\": \"{{inverterId2}}\",\n      \"timestamp\": \"2026-04-20T10:00:00\",\n      \"p\": 0.48, \"q\": 0.12, \"vMag\": 0.99, \"freq\": 59.97,\n      \"deltaOmega\": 0.015, \"consensusError\": 0.055, \"pNorm\": 0.48,\n      \"pProduction\": 0.55, \"pLoad\": 0.07, \"pNet\": 0.48\n    },\n    {\n      \"inverterId\": \"{{inverterId2}}\",\n      \"timestamp\": \"2026-04-20T10:00:01\",\n      \"p\": 0.52, \"q\": 0.10, \"vMag\": 1.00, \"freq\": 59.99,\n      \"deltaOmega\": 0.009, \"consensusError\": 0.028, \"pNorm\": 0.52,\n      \"pProduction\": 0.58, \"pLoad\": 0.06, \"pNet\": 0.52\n    },\n    {\n      \"inverterId\": \"{{inverterId2}}\",\n      \"timestamp\": \"2026-04-20T10:00:02\",\n      \"p\": 0.58, \"q\": 0.09, \"vMag\": 1.01, \"freq\": 60.00,\n      \"deltaOmega\": 0.002, \"consensusError\": 0.008, \"pNorm\": 0.58,\n      \"pProduction\": 0.63, \"pLoad\": 0.05, \"pNet\": 0.58\n    }\n  ]\n}" }
+          }
+        },
+        {
+          "name": "Ingest batch - empty points (400)",
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 400', () => pm.response.to.have.status(400));"
+            ]}
+          }],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": "{{base_url}}/telemetry/batch",
+            "body": { "mode": "raw", "raw": "{\n  \"simulationId\": \"{{simulationId}}\",\n  \"points\": []\n}" }
+          }
+        },
+        {
+          "name": "Ingest batch - unknown simulation (404)",
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 404', () => pm.response.to.have.status(404));"
+            ]}
+          }],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": "{{base_url}}/telemetry/batch",
+            "body": { "mode": "raw", "raw": "{\n  \"simulationId\": \"00000000-0000-0000-0000-000000000000\",\n  \"points\": [\n    {\n      \"inverterId\": \"{{inverterId1}}\",\n      \"timestamp\": \"2026-04-20T10:00:00\",\n      \"p\": 0.5, \"q\": 0.1, \"vMag\": 1.0, \"freq\": 60.0,\n      \"deltaOmega\": 0.01, \"consensusError\": 0.05, \"pNorm\": 0.5,\n      \"pProduction\": 0.6, \"pLoad\": 0.1, \"pNet\": 0.5\n    }\n  ]\n}" }
+          }
+        },
+        {
+          "name": "Ingest batch - no token (401)",
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 401', () => pm.response.to.have.status(401));"
+            ]}
+          }],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{base_url}}/telemetry/batch",
+            "body": { "mode": "raw", "raw": "{\n  \"simulationId\": \"{{simulationId}}\",\n  \"points\": []\n}" }
+          }
+        },
+        {
+          "name": "Query all - toate datele simularii",
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 200', () => pm.response.to.have.status(200));",
+              "pm.test('Has 6 entries', () => pm.expect(pm.response.json().length).to.eql(6));",
+              "pm.test('Has p field', () => pm.expect(pm.response.json()[0].p).to.be.a('number'));",
+              "pm.test('Has pProduction', () => pm.expect(pm.response.json()[0].pProduction).to.be.a('number'));",
+              "pm.test('Has pLoad', () => pm.expect(pm.response.json()[0].pLoad).to.be.a('number'));",
+              "pm.test('Has deltaOmega', () => pm.expect(pm.response.json()[0].deltaOmega).to.be.a('number'));",
+              "pm.test('Has consensusError', () => pm.expect(pm.response.json()[0].consensusError).to.be.a('number'));"
+            ]}
+          }],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": "{{base_url}}/simulations/{{simulationId}}/telemetry"
+          }
+        },
+        {
+          "name": "Query - filtru inverterId1",
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 200', () => pm.response.to.have.status(200));",
+              "pm.test('Has 3 entries', () => pm.expect(pm.response.json().length).to.eql(3));",
+              "pm.test('All from Inv1', () => {",
+              "  const id = pm.collectionVariables.get('inverterId1');",
+              "  pm.response.json().forEach(e => pm.expect(e.inverterId).to.eql(id));",
+              "});"
+            ]}
+          }],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{base_url}}/simulations/{{simulationId}}/telemetry?inverterId={{inverterId1}}",
+              "query": [{ "key": "inverterId", "value": "{{inverterId1}}" }]
+            }
+          }
+        },
+        {
+          "name": "Query - filtru interval timp",
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 200', () => pm.response.to.have.status(200));",
+              "pm.test('Is array', () => pm.expect(pm.response.json()).to.be.an('array'));"
+            ]}
+          }],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{base_url}}/simulations/{{simulationId}}/telemetry?from=2026-04-20T10:00:00&to=2026-04-20T10:00:01",
+              "query": [
+                { "key": "from", "value": "2026-04-20T10:00:00" },
+                { "key": "to", "value": "2026-04-20T10:00:01" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Query - unknown simulation (404)",
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 404', () => pm.response.to.have.status(404));"
+            ]}
+          }],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": "{{base_url}}/simulations/00000000-0000-0000-0000-000000000000/telemetry"
+          }
+        },
+        {
+          "name": "Latest snapshot - ultimul punct per invertor",
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 200', () => pm.response.to.have.status(200));",
+              "pm.test('Has simulationId', () => pm.expect(pm.response.json().simulationId).to.eql(pm.collectionVariables.get('simulationId')));",
+              "pm.test('Has 2 snapshots', () => pm.expect(pm.response.json().snapshots.length).to.eql(2));",
+              "pm.test('Has p field', () => pm.expect(pm.response.json().snapshots[0].p).to.be.a('number'));",
+              "pm.test('Has consensusError', () => pm.expect(pm.response.json().snapshots[0].consensusError).to.be.a('number'));",
+              "pm.test('Has pProduction', () => pm.expect(pm.response.json().snapshots[0].pProduction).to.be.a('number'));",
+              "pm.test('Inv1 last p=0.6', () => {",
+              "  const inv1 = pm.response.json().snapshots.find(s => s.inverterId === pm.collectionVariables.get('inverterId1'));",
+              "  pm.expect(inv1.p).to.eql(0.60);",
+              "});"
+            ]}
+          }],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": "{{base_url}}/simulations/{{simulationId}}/telemetry/latest"
+          }
+        },
+        {
+          "name": "Latest snapshot - unknown simulation (404)",
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 404', () => pm.response.to.have.status(404));"
+            ]}
+          }],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": "{{base_url}}/simulations/00000000-0000-0000-0000-000000000000/telemetry/latest"
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "── 07  CLEANUP ─────────────────────────────────────",
+      "item": [
+        {
+          "name": "Stop simulation → COMPLETED",
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 200', () => pm.response.to.have.status(200));",
+              "pm.test('Status COMPLETED', () => pm.expect(pm.response.json().status).to.eql('COMPLETED'));",
+              "pm.test('Has endedAt', () => pm.expect(pm.response.json().endedAt).to.be.a('string'));"
+            ]}
+          }],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": "{{base_url}}/simulations/{{simulationId}}/stop"
+          }
+        },
+        {
+          "name": "Delete Inv2",
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 204', () => pm.response.to.have.status(204));"
+            ]}
+          }],
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": "{{base_url}}/grids/{{gridId}}/inverters/{{inverterId2}}"
+          }
+        },
+        {
+          "name": "Delete Inv1",
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 204', () => pm.response.to.have.status(204));"
+            ]}
+          }],
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": "{{base_url}}/grids/{{gridId}}/inverters/{{inverterId1}}"
+          }
+        },
+        {
+          "name": "Delete grid",
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 204', () => pm.response.to.have.status(204));"
+            ]}
+          }],
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": "{{base_url}}/grids/{{gridId}}"
+          }
+        }
+      ]
+    }
+
+  ]
+}

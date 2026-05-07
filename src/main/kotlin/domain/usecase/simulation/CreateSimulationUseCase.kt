@@ -1,6 +1,5 @@
 package domain.usecase.simulation
 
-import com.typesafe.config.ConfigException
 import domain.model.simulation.Simulation
 import domain.model.simulation.SimulationFidelity
 import domain.model.simulation.SimulationStatus
