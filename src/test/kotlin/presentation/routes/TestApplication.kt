@@ -21,8 +21,11 @@ import com.auth0.jwt.JWT
 import com.auth0.jwt.algorithms.Algorithm
 import domain.model.grid.Grid
 import domain.model.grid.inverter.Inverter
+import domain.model.simulation.Simulation
+import domain.model.simulation.SimulationStatus
 import domain.repository.GridRepository
 import domain.repository.InverterRepository
+import domain.repository.SimulationRepository
 import domain.usecase.grid.CreateGridUseCase
 import domain.usecase.grid.DeleteGridUseCase
 import domain.usecase.grid.GetGridUseCase
@@ -32,10 +35,18 @@ import domain.usecase.inverter.DeleteInverterUseCase
 import domain.usecase.inverter.GetInverterUseCase
 import domain.usecase.inverter.ListInvertersUseCase
 import domain.usecase.inverter.UpdateInverterUseCase
+import domain.usecase.simulation.CreateSimulationUseCase
+import domain.usecase.simulation.GetSimulationStatusUseCase
+import domain.usecase.simulation.GetSimulationUseCase
+import domain.usecase.simulation.ListSimulationsUseCase
+import domain.usecase.simulation.StartSimulationUseCase
+import domain.usecase.simulation.StopSimulationUseCase
 import presentation.plugins.ErrorResponse
 import kotlinx.serialization.json.Json
+import presentation.plugins.ValidationException
 import presentation.routes.authRoutes
 import presentation.routes.gridRoutes
+import presentation.routes.simulationRoutes
 import java.util.UUID
 
 val testTokenConfig = TokenConfig(
@@ -79,10 +90,37 @@ class FakeInverterRepository : InverterRepository {
     fun clear() = store.clear()
 }
 
+class FakeSimulationRepository : SimulationRepository {
+    private val store = mutableMapOf<UUID, Simulation>()
+
+    override fun findById(id: UUID): Simulation? =
+        store[id]
+
+    override fun findAllByGrid(gridId: UUID): List<Simulation> =
+        store.values
+            .filter { it.gridId == gridId }
+            .sortedByDescending { it.startedAt }
+
+    override fun findActiveByGrid(gridId: UUID): Simulation? =
+        store.values.firstOrNull {
+            it.gridId == gridId &&
+                    it.status in listOf(SimulationStatus.PENDING, SimulationStatus.RUNNING)
+        }
+
+    override fun save(simulation: Simulation): Simulation =
+        simulation.also { store[it.id] = it }
+
+    override fun update(simulation: Simulation): Simulation =
+        simulation.also { store[it.id] = it }
+
+    fun clear() = store.clear()
+}
+
 fun Application.testModule(
     userRepository: FakeUserRepository,
     gridRepository: FakeGridRepository = FakeGridRepository(),
-    inverterRepository: FakeInverterRepository = FakeInverterRepository()
+    inverterRepository: FakeInverterRepository = FakeInverterRepository(),
+    simulationRepository: FakeSimulationRepository = FakeSimulationRepository()
 ) {
     val passwordService = PasswordServiceImpl()
     val tokenService = JwtServiceImpl(testTokenConfig)
@@ -105,6 +143,14 @@ fun Application.testModule(
     val updateInverter = UpdateInverterUseCase(inverterRepository)
     val deleteInverter = DeleteInverterUseCase(inverterRepository)
 
+    // Simulation
+    val createSimulation = CreateSimulationUseCase(simulationRepository, gridRepository)
+    val getSimulation = GetSimulationUseCase(simulationRepository)
+    val listSimulations = ListSimulationsUseCase(simulationRepository)
+    val startSimulation = StartSimulationUseCase(simulationRepository)
+    val stopSimulation = StopSimulationUseCase(simulationRepository)
+    val getSimulationStatus = GetSimulationStatusUseCase(simulationRepository)
+
     install(ContentNegotiation) { json(Json { ignoreUnknownKeys = true }) }
 
     install(Authentication) {
@@ -125,16 +171,22 @@ fun Application.testModule(
     }
 
     install(StatusPages) {
+        exception<presentation.plugins.NotFoundException> { call, cause ->
+            call.respond(
+                HttpStatusCode.NotFound,
+                ErrorResponse("NOT_FOUND", cause.message ?: "Resource not found")
+            )
+        }
+        exception<ValidationException> { call, cause ->
+            call.respond(
+                HttpStatusCode.BadRequest,
+                ErrorResponse("BAD_REQUEST", cause.message ?: "Validation failed")
+            )
+        }
         exception<IllegalArgumentException> { call, cause ->
             call.respond(
                 HttpStatusCode.BadRequest,
                 ErrorResponse("BAD_REQUEST", cause.message ?: "Invalid input")
-            )
-        }
-        exception<NoSuchElementException> { call, cause ->
-            call.respond(
-                HttpStatusCode.NotFound,
-                ErrorResponse("NOT_FOUND", cause.message ?: "Resource not found")
             )
         }
         exception<Throwable> { call, cause ->
@@ -153,6 +205,10 @@ fun Application.testModule(
             createGrid, getGrid, listGrids, deleteGrid,
             createInverter, getInverter, listInverters,
             updateInverter, deleteInverter
+        )
+        simulationRoutes(
+            createSimulation, getSimulation, listSimulations,
+            startSimulation, stopSimulation, getSimulationStatus
         )
     }
 }

@@ -3,6 +3,7 @@ package domain.usecase.inverter
 import domain.model.grid.inverter.Inverter
 import domain.repository.GridRepository
 import domain.repository.InverterRepository
+import presentation.plugins.NotFoundException
 import java.util.UUID
 
 class CreateInverterUseCase(
@@ -26,7 +27,7 @@ class CreateInverterUseCase(
 
     fun execute(input: Input): Inverter {
         gridRepository.findById(input.gridId)
-            ?: throw NoSuchElementException("Grid with id ${input.gridId} not found")
+            ?: throw NotFoundException("Grid with id ${input.gridId} not found")
 
         require(input.label.isNotBlank()) { "Inverter label cannot be blank" }
         require(input.index >= 0) { "Inverter index must be >= 0" }
