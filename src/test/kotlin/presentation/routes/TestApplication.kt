@@ -23,9 +23,11 @@ import domain.model.grid.Grid
 import domain.model.grid.inverter.Inverter
 import domain.model.simulation.Simulation
 import domain.model.simulation.SimulationStatus
+import domain.model.telemetry.TelemetryEntry
 import domain.repository.GridRepository
 import domain.repository.InverterRepository
 import domain.repository.SimulationRepository
+import domain.repository.TelemetryRepository
 import domain.usecase.grid.CreateGridUseCase
 import domain.usecase.grid.DeleteGridUseCase
 import domain.usecase.grid.GetGridUseCase
@@ -41,12 +43,17 @@ import domain.usecase.simulation.GetSimulationUseCase
 import domain.usecase.simulation.ListSimulationsUseCase
 import domain.usecase.simulation.StartSimulationUseCase
 import domain.usecase.simulation.StopSimulationUseCase
+import domain.usecase.telemetry.GetLatestSnapshotUseCase
+import domain.usecase.telemetry.IngestTelemetryUseCase
+import domain.usecase.telemetry.QueryTelemetryUseCase
 import presentation.plugins.ErrorResponse
 import kotlinx.serialization.json.Json
 import presentation.plugins.ValidationException
 import presentation.routes.authRoutes
 import presentation.routes.gridRoutes
 import presentation.routes.simulationRoutes
+import presentation.routes.telemetryRoutes
+import java.time.LocalDateTime
 import java.util.UUID
 
 val testTokenConfig = TokenConfig(
@@ -116,11 +123,52 @@ class FakeSimulationRepository : SimulationRepository {
     fun clear() = store.clear()
 }
 
+class FakeTelemetryRepository : TelemetryRepository {
+    private val store = mutableListOf<TelemetryEntry>()
+
+    override fun saveBatch(entries: List<TelemetryEntry>): List<TelemetryEntry> {
+        store.addAll(entries)
+        return entries
+    }
+
+    override fun findBySimulation(simulationId: UUID): List<TelemetryEntry> =
+        store.filter { it.simulationId == simulationId }
+            .sortedBy { it.timestamp }
+
+    override fun findBySimulationAndTimeRange(
+        simulationId: UUID,
+        from: LocalDateTime,
+        to: LocalDateTime
+    ): List<TelemetryEntry> =
+        store.filter {
+            it.simulationId == simulationId &&
+                    it.timestamp >= from &&
+                    it.timestamp <= to
+        }.sortedBy { it.timestamp }
+
+    override fun findBySimulationAndInverter(
+        simulationId: UUID,
+        inverterId: UUID
+    ): List<TelemetryEntry> =
+        store.filter {
+            it.simulationId == simulationId &&
+                    it.inverterId == inverterId
+        }.sortedBy { it.timestamp }
+
+    override fun findLatestPerInverter(simulationId: UUID): List<TelemetryEntry> =
+        store.filter { it.simulationId == simulationId }
+            .sortedByDescending { it.timestamp }
+            .distinctBy { it.inverterId }
+
+    fun clear() = store.clear()
+}
+
 fun Application.testModule(
     userRepository: FakeUserRepository,
     gridRepository: FakeGridRepository = FakeGridRepository(),
     inverterRepository: FakeInverterRepository = FakeInverterRepository(),
-    simulationRepository: FakeSimulationRepository = FakeSimulationRepository()
+    simulationRepository: FakeSimulationRepository = FakeSimulationRepository(),
+    telemetryRepository: FakeTelemetryRepository   = FakeTelemetryRepository()
 ) {
     val passwordService = PasswordServiceImpl()
     val tokenService = JwtServiceImpl(testTokenConfig)
@@ -150,6 +198,11 @@ fun Application.testModule(
     val startSimulation = StartSimulationUseCase(simulationRepository)
     val stopSimulation = StopSimulationUseCase(simulationRepository)
     val getSimulationStatus = GetSimulationStatusUseCase(simulationRepository)
+
+    // Telemetry
+    val ingestTelemetry   = IngestTelemetryUseCase(telemetryRepository, simulationRepository, inverterRepository)
+    val queryTelemetry    = QueryTelemetryUseCase(telemetryRepository, simulationRepository)
+    val getLatestSnapshot = GetLatestSnapshotUseCase(telemetryRepository, simulationRepository)
 
     install(ContentNegotiation) { json(Json { ignoreUnknownKeys = true }) }
 
@@ -210,5 +263,6 @@ fun Application.testModule(
             createSimulation, getSimulation, listSimulations,
             startSimulation, stopSimulation, getSimulationStatus
         )
+        telemetryRoutes(ingestTelemetry, queryTelemetry, getLatestSnapshot)
     }
 }

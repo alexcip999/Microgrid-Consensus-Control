@@ -3,6 +3,7 @@ package presentation.di
 import domain.repository.GridRepository
 import domain.repository.InverterRepository
 import domain.repository.SimulationRepository
+import domain.repository.TelemetryRepository
 import infra.service.JwtServiceImpl
 import infra.service.PasswordServiceImpl
 import domain.usecase.auth.GetCurrentUserUseCase
@@ -26,47 +27,58 @@ import domain.usecase.simulation.GetSimulationUseCase
 import domain.usecase.simulation.ListSimulationsUseCase
 import domain.usecase.simulation.StartSimulationUseCase
 import domain.usecase.simulation.StopSimulationUseCase
+import domain.usecase.telemetry.GetLatestSnapshotUseCase
+import domain.usecase.telemetry.IngestTelemetryUseCase
+import domain.usecase.telemetry.QueryTelemetryUseCase
 import infra.repository.GridRepositoryImpl
 import infra.repository.InverterRepositoryImpl
 import infra.repository.SimulationRepositoryImpl
+import infra.repository.TelemetryRepositoryImpl
 import infra.repository.UserRepositoryImpl
 import org.koin.dsl.module
 
 val appModule = module {
-    // ── Infrastructure ─────────────────────────────────
+    // Infrastructure
     single<UserRepository> { UserRepositoryImpl() }
     single<GridRepository> { GridRepositoryImpl() }
     single<InverterRepository> { InverterRepositoryImpl() }
     single<SimulationRepository> { SimulationRepositoryImpl() }
 
-    // ── Services ───────────────────────────────────────
+    // Services
     single<EncryptService> { PasswordServiceImpl() }
     single<TokenService> { JwtServiceImpl(get()) }
-    // ── Use cases ──────────────────────────────────────
 
-    // ── Auth use cases ─────────────────────────────────
+    // Use cases
+
+    // Auth use cases
     single { RegisterUseCase(get(), get(), get()) }
     single { LoginUseCase(get(), get(), get()) }
     single { GetCurrentUserUseCase(get()) }
 
-    // ── Grid use cases ─────────────────────────────────
+    // Grid use cases
     single { CreateGridUseCase(get()) }
     single { GetGridUseCase(get()) }
     single { ListGridsUseCase(get()) }
     single { DeleteGridUseCase(get()) }
 
-    // ── Inverter use cases ─────────────────────────────
+    // Inverter use cases
     single { CreateInverterUseCase(get(), get()) }
     single { GetInverterUseCase(get()) }
     single { ListInvertersUseCase(get()) }
     single { UpdateInverterUseCase(get()) }
     single { DeleteInverterUseCase(get()) }
 
-    // ── Simulation use cases ───────────────────────────────────
+    // Simulation use cases
     single { CreateSimulationUseCase(get(), get()) }
     single { GetSimulationUseCase(get()) }
     single { ListSimulationsUseCase(get()) }
     single { StartSimulationUseCase(get()) }
     single { StopSimulationUseCase(get()) }
     single { GetSimulationStatusUseCase(get()) }
+
+    // Telemetry
+    single<TelemetryRepository> { TelemetryRepositoryImpl() }
+    single { IngestTelemetryUseCase(get(), get(), get()) }
+    single { QueryTelemetryUseCase(get(), get()) }
+    single { GetLatestSnapshotUseCase(get(), get()) }
 }
