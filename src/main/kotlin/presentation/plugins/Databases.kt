@@ -5,6 +5,7 @@ import com.zaxxer.hikari.HikariDataSource
 import infra.db.table.GridsTable
 import infra.db.table.InvertersTable
 import infra.db.table.SimulationsTable
+import infra.db.table.TelemetryTable
 import infra.db.table.UsersTable
 import io.ktor.server.application.*
 import org.jetbrains.exposed.sql.Database
@@ -32,7 +33,8 @@ fun Application.configureDatabases() {
             UsersTable,
             GridsTable,
             InvertersTable,
-            SimulationsTable
+            SimulationsTable,
+            TelemetryTable
         )
     }
 
